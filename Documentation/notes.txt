@@ -1,0 +1,31 @@
+eddy current and motion correction using FSL, AFNI, or DTIprep
+nonlinear least squares using vnl
+
+D = 6 parameters
+K = 15 parameters
+
+S_0 is either a free parameter or the average B0 image.
+
+Total of 21 (or 22) parameters.
+
+See Equations 1 and 2 of Zhuo 2012 paper.
+
+"Diffusion weighted (DW) images from individual averages were
+corrected first for motion artifacts using the 3dvolreg command in
+AFNI. The 2 averages of motion
+corrected DW images were then averaged and spatially smoothed using a
+Gaussian filter with a FWHM of 0.3 mm to increase the signal–noise
+ratio (SNR). DW signals from all three b-values (b = 0, 1000, 2000
+s/mm2) and 30 directions were then fitted voxel-wise using non-linear
+least squares fit to the equation:"
+
+Input is a file:
+b g1 g2 g3
+
+for each b value and direction
+
+OR
+
+could use NRRD format from Slicer DicomToNrrdConverter
+
+
