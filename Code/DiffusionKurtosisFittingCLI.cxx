@@ -27,53 +27,43 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 *******************************************************************************/
 #include <iostream>
-using std::cout;
-using std::cerr;
-using std::clog;
-using std::endl;
-
+#include <vector>
 #include <string>
-#include <cassert>
-
-#include <itkImageFileReader.h>
-#include <itkImageFileWriter.h>
-#include <itkOrientedImage.h>
 
 // command line parsing
 #include "vul_arg.h"
 
-typedef short PixelType;
-typedef itk::OrientedImage<PixelType, 3> Image3DType;
-typedef itk::OrientedImage<PixelType, 2> Image2DType;
+#include "Types.h"
+#include "DiffusionKurtosisFittingApp.h"
 
 int main(int argc, char** argv)
 {
   // command line args
-  vul_arg<std::string> infile(0, "Input File");
-  vul_arg<std::string> outfile(0, "Output File");
+  vul_arg<std::vector< std::string > > infiles("-i", "Input NRRD DWI Files");
+  vul_arg<std::string> b0_outfile("-b", "Output B0 File", "B0_output.nii.gz");
+  vul_arg<std::string> dti_outfile("-d", "Output Diffusion Tensor File", "DTI_output.nii.gz");
+  vul_arg<std::string> dki_outfile("-k", "Output Diffusion Kurtosis Tensor File", "DKI_output.nii.gz");
   vul_arg_parse(argc, argv);
 
-  Image3DType::Pointer input;
-  itk::ImageFileReader< Image3DType >::Pointer reader =
-    itk::ImageFileReader< Image3DType >::New();
-  reader->SetFileName(infile());
+  DiffusionKurtosisFittingApp app;
 
-  itk::ImageFileWriter< Image3DType >::Pointer writer =
-    itk::ImageFileWriter< Image3DType >::New();
-  writer->SetFileName(outfile());
-
-  writer->SetInput( reader->GetOutput() );
-
-  try
+  app.ReadEncodings(infiles());
+  if(!app.ReadDWI(infiles()) )
     {
-    writer->Update();
+    std::cout << "Error: DWI images cannot be read or are incompatible" << std::endl;
+    return EXIT_FAILURE;
     }
-  catch( itk::ExceptionObject & excp )
-    {
-      std::cerr << "Exception thrown while writing.\n";
-      std::cerr << excp << std::endl;
-      return EXIT_FAILURE;
-    }
+  std::cout << "Computing B0" << std::endl;
+  app.ComputeB0Image();
+  app.WriteB0Image(b0_outfile());
+
+  std::cout << "Computing Tensors" << std::endl;
+  app.ComputeDiffusionAndKurtosis();
+
+  app.ComputeMeanDiffusion();
+  app.WriteMDImage(std::string("MD_output.nii.gz"));
+
+  //app.PrintInfo();
 
   return EXIT_SUCCESS;
 }

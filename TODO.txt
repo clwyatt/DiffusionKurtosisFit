@@ -1,0 +1,11 @@
+NRRD File IO -> vector of volumes (memory constraints?)
+Representing Gradients and parsing from NRRD header
+
+compute average B0 from all zero gradient volumes
+
+foreach voxel 
+  fit
+
+output is 6D volume and 15D volume of DTI and DKI parameters
+plus the averaged B0
+
