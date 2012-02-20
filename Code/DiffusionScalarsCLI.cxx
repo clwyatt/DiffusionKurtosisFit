@@ -41,6 +41,7 @@ OF SUCH DAMAGE.
 
 TensorImageType::Pointer dtImage;
 MDImageType::Pointer mdImage;
+MDImageType::Pointer faImage;
 
 void ReadDiffusionTensorImage(std::string filename)
 {
@@ -75,12 +76,20 @@ void ComputeMeanDiffusion()
   mdImage->SetDirection( direction );
   mdImage->Allocate();
 
+  faImage = MDImageType::New();
+  faImage->SetRegions( region );
+  faImage->SetOrigin( origin );
+  faImage->SetSpacing( spacing );
+  faImage->SetDirection( direction );
+  faImage->Allocate();
+
   typedef itk::ImageRegionIterator<TensorImageType> TensorIteratorType;
   typedef itk::ImageRegionIterator<MDImageType> MDIteratorType;
 
   TensorIteratorType dtIt(dtImage, dtImage->GetLargestPossibleRegion() );
   MDIteratorType mdIt(mdImage, mdImage->GetLargestPossibleRegion() );
-  for ( dtIt.GoToBegin(), mdIt.GoToBegin(); !dtIt.IsAtEnd(); ++dtIt, ++mdIt)
+  MDIteratorType faIt(faImage, faImage->GetLargestPossibleRegion() );
+  for ( dtIt.GoToBegin(), mdIt.GoToBegin(), faIt.GoToBegin(); !dtIt.IsAtEnd(); ++dtIt, ++mdIt, ++faIt)
       {
       TensorImageType::PixelType dtVec = dtIt.Get();
       vnl_matrix<double> DT(3,3);
@@ -95,9 +104,17 @@ void ComputeMeanDiffusion()
       DT(2,2) = dtVec[5];
 
       vnl_symmetric_eigensystem<double> E(DT);
+      double l1 = E.get_eigenvalue(0);
+      double l2 = E.get_eigenvalue(1);
+      double l3 = E.get_eigenvalue(2);
 
-      double meandiff = (E.get_eigenvalue(0) + E.get_eigenvalue(1) + E.get_eigenvalue(2))/3.0;
-      mdIt.Set(meandiff);
+      double md = (l1 + l2 + l3)/3.0;
+      mdIt.Set(md);
+
+      double fanum = sqrt(3*((l1-md)*(l1-md) + (l2-md)*(l2-md) + (l3-md)*(l3-md)));
+      double faden = sqrt(2*(l1*l1 + l2*l2 + l3*l3));
+      double fa = fanum/faden;
+      faIt.Set(fa);
       }
 }
 
@@ -117,6 +134,23 @@ void WriteMeanDiffusionImage(std::string filename)
     }
 }
 
+void WriteFractionalAnisotropyImage(std::string filename)
+{
+  typedef itk::ImageFileWriter<MDImageType> FileWriterType;
+  FileWriterType::Pointer writer = FileWriterType::New();
+  writer->SetFileName( filename.c_str() );
+  writer->SetInput(faImage);
+  try
+    {
+    writer->Update();
+    }
+  catch (itk::ExceptionObject e)
+    {
+    std::cout << "Error: Could not Write FA Image: " << e << std::endl;
+    }
+}
+
+
 int main(int argc, char** argv)
 {
   // command line args
@@ -128,6 +162,7 @@ int main(int argc, char** argv)
   ReadDiffusionTensorImage( infile() );
   ComputeMeanDiffusion();
   WriteMeanDiffusionImage( md_outfile() );
+  WriteFractionalAnisotropyImage( fa_outfile() );
 
   return EXIT_SUCCESS;
 }
