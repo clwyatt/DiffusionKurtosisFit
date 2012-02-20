@@ -173,9 +173,7 @@ void ComputeMeanKurtosis()
 	meankurt += kapp;
 	}
       double value = meankurt/static_cast<double>(numNonZeroEncodings);
-      if(value < -1e10) value = -1e10; // TODO: fix this temporary
-				       // Hack, find root cause of the issue
-      //if(value > -1e9) value = -1e9;
+      
       mdIt.Set(value);
       }
 }
@@ -196,6 +194,55 @@ void WriteMeanKurtosisImage(std::string filename)
     }
 }
 
+void WriteKurtosisComponents(std::string basename)
+{
+
+  TensorImageType::RegionType region = ktImage->GetLargestPossibleRegion();
+  TensorImageType::RegionType::IndexType index = region.GetIndex();
+  TensorImageType::RegionType::SizeType size = region.GetSize();
+  TensorImageType::PointType origin = ktImage->GetOrigin();
+  TensorImageType::SpacingType spacing = ktImage->GetSpacing();
+  TensorImageType::DirectionType direction = ktImage->GetDirection();
+
+  MDImageType::Pointer tempImage;
+  tempImage = MDImageType::New();
+  tempImage->SetRegions( region );
+  tempImage->SetOrigin( origin );
+  tempImage->SetSpacing( spacing );
+  tempImage->SetDirection( direction );
+  tempImage->Allocate();
+
+  typedef itk::ImageRegionIterator<TensorImageType> TensorIteratorType;
+  typedef itk::ImageRegionIterator<MDImageType> MDIteratorType;
+
+  TensorIteratorType ktIt(ktImage, ktImage->GetLargestPossibleRegion() );
+  MDIteratorType tempIt(tempImage, tempImage->GetLargestPossibleRegion() );
+
+  for(unsigned int componentIndex = 0; componentIndex < 15; ++componentIndex)
+    {
+    for ( ktIt.GoToBegin(), tempIt.GoToBegin(); !ktIt.IsAtEnd(); ++ktIt, ++tempIt)
+      {
+      TensorImageType::PixelType ktVec = ktIt.Get();
+      tempIt.Set(ktVec[componentIndex]);
+      }
+
+    typedef itk::ImageFileWriter<MDImageType> FileWriterType;
+    FileWriterType::Pointer writer = FileWriterType::New();
+    std::ostringstream oss;
+    oss << basename.c_str() << "_" << componentIndex << ".nii.gz";
+    writer->SetFileName( oss.str().c_str() );
+    writer->SetInput(tempImage);
+    try
+      {
+      writer->Update();
+      }
+    catch (itk::ExceptionObject e)
+      {
+      std::cout << "Error: Could not Write MD Image: " << e << std::endl;
+      }
+    }
+}
+
 int main(int argc, char** argv)
 {
   // command line args
@@ -203,6 +250,7 @@ int main(int argc, char** argv)
   vul_arg<std::string> dki_infile("-k", "Input KTI File", "");
   vul_arg<std::string> dti_infile("-d", "Input DTI File", "");
   vul_arg<std::string> md_outfile("-m", "Output Mean Kurtosis File", "MK_output.nii.gz");
+  vul_arg<bool> dump_components("-u", "Dump individual tensor components", false);
   vul_arg_parse(argc, argv);
 
   ReadEncodings( reffile() );
@@ -210,6 +258,11 @@ int main(int argc, char** argv)
   ReadKurtosisTensorImage( dki_infile() );
   ComputeMeanKurtosis();
   WriteMeanKurtosisImage( md_outfile() );
+
+  if( dump_components() )
+    {
+    WriteKurtosisComponents(std::string("DKI_component"));
+    }
 
   return EXIT_SUCCESS;
 }
