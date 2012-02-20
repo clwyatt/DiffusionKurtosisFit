@@ -53,17 +53,13 @@ int main(int argc, char** argv)
     std::cout << "Error: DWI images cannot be read or are incompatible" << std::endl;
     return EXIT_FAILURE;
     }
-  std::cout << "Computing B0" << std::endl;
-  app.ComputeB0Image();
-  app.WriteB0Image(b0_outfile());
 
-  std::cout << "Computing Tensors" << std::endl;
+  app.ComputeB0Image();
   app.ComputeDiffusionAndKurtosis();
 
-  app.ComputeMeanDiffusion();
-  app.WriteMDImage(std::string("MD_output.nii.gz"));
-
-  //app.PrintInfo();
+  app.WriteB0Image(b0_outfile());
+  app.WriteDiffusionTensorImage(dti_outfile());
+  app.WriteKurtosisTensorImage(dki_outfile());
 
   return EXIT_SUCCESS;
 }

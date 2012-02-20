@@ -240,9 +240,6 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
   B0ImageIteratorType b0It(m_B0Image, m_B0Image->GetLargestPossibleRegion() );
   TensorIteratorType dtIt( m_DiffusionTensorImage,  m_DiffusionTensorImage->GetLargestPossibleRegion() );
   TensorIteratorType ktIt( m_KurtosisTensorImage,  m_KurtosisTensorImage->GetLargestPossibleRegion() );
-
-  unsigned int max_iterations = size[0]*size[1]*size[2];
-  unsigned int iterations = 1;
   for(dwiIt.GoToBegin(), b0It.GoToBegin(), dtIt.GoToBegin(), ktIt.GoToBegin();
       !dwiIt.IsAtEnd();
       ++dwiIt, ++b0It, ++dtIt, ++ktIt)
@@ -305,53 +302,9 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
       ktVec[i-6] = x[i];
       }
     ktIt.Set(ktVec);
-
-    //std::cout << iterations << " / " << max_iterations << std::endl;
-    iterations += 1;
     }
 }
 
-void DiffusionKurtosisFittingApp::ComputeMeanDiffusion()
-{
-  DiffusionImageType::RegionType region = m_FullEncodingImage->GetLargestPossibleRegion();
-  DiffusionImageType::RegionType::IndexType index = region.GetIndex();
-  DiffusionImageType::RegionType::SizeType size = region.GetSize();
-  DiffusionImageType::PointType origin = m_FullEncodingImage->GetOrigin();
-  DiffusionImageType::SpacingType spacing = m_FullEncodingImage->GetSpacing();
-  DiffusionImageType::DirectionType direction = m_FullEncodingImage->GetDirection();
-
-  m_MDImage = MDImageType::New();
-  m_MDImage->SetRegions( region );
-  m_MDImage->SetOrigin( origin );
-  m_MDImage->SetSpacing( spacing );
-  m_MDImage->SetDirection( direction );
-  m_MDImage->Allocate();
-
-  typedef itk::ImageRegionIterator<TensorImageType> DWIIteratorType;
-  typedef itk::ImageRegionIterator<MDImageType> MDIteratorType;
-
-  DWIIteratorType dtIt(m_DiffusionTensorImage, m_DiffusionTensorImage->GetLargestPossibleRegion() );
-  MDIteratorType mdIt(m_MDImage, m_MDImage->GetLargestPossibleRegion() );
-  for ( dtIt.GoToBegin(), mdIt.GoToBegin(); !dtIt.IsAtEnd(); ++dtIt, ++mdIt)
-      {
-      TensorImageType::PixelType dtVec = dtIt.Get();
-      vnl_matrix<double> DT(3,3);
-      DT(0,0) = dtVec[0];
-      DT(0,1) = dtVec[1];
-      DT(0,2) = dtVec[2];
-      DT(1,0) = dtVec[1];
-      DT(1,1) = dtVec[3];
-      DT(1,2) = dtVec[4];
-      DT(2,0) = dtVec[2];
-      DT(2,1) = dtVec[4];
-      DT(2,2) = dtVec[5];
-
-      vnl_symmetric_eigensystem<double> E(DT);
-
-      double meandiff = (E.get_eigenvalue(0) + E.get_eigenvalue(1) + E.get_eigenvalue(2))/3.0;
-      mdIt.Set(meandiff);
-      }
-}
 
 void DiffusionKurtosisFittingApp::WriteB0Image(std::string filename)
 {
@@ -369,27 +322,34 @@ void DiffusionKurtosisFittingApp::WriteB0Image(std::string filename)
     }
 }
 
-void DiffusionKurtosisFittingApp::WriteMDImage(std::string filename)
+void DiffusionKurtosisFittingApp::WriteDiffusionTensorImage(std::string filename)
 {
-  typedef itk::ImageFileWriter<MDImageType> FileWriterType;
+  typedef itk::ImageFileWriter<TensorImageType> FileWriterType;
   FileWriterType::Pointer writer = FileWriterType::New();
   writer->SetFileName( filename.c_str() );
-  writer->SetInput(m_MDImage);
+  writer->SetInput(m_DiffusionTensorImage);
   try
     {
     writer->Update();
     }
   catch (itk::ExceptionObject e)
     {
-    std::cout << "Error: Could not Write MD Image: " << e << std::endl;
+    std::cout << "Error: Could not Write Diffusion Tensor Image: " << e << std::endl;
     }
 }
 
-void DiffusionKurtosisFittingApp::PrintInfo()
+void DiffusionKurtosisFittingApp::WriteKurtosisTensorImage(std::string filename)
 {
-  std::cout << "Number of Encodings: " << m_dwiEncodings.size() << std::endl;
-  std::cout << m_NumberZeroEncodings << " are Zero " << std::endl;
-  std::cout << m_NumberNonZeroEncodings << " are Non-Zero " << std::endl;
-
-  std::cout << m_FullEncodingImage << std::endl;
+  typedef itk::ImageFileWriter<TensorImageType> FileWriterType;
+  FileWriterType::Pointer writer = FileWriterType::New();
+  writer->SetFileName( filename.c_str() );
+  writer->SetInput(m_KurtosisTensorImage);
+  try
+    {
+    writer->Update();
+    }
+  catch (itk::ExceptionObject e)
+    {
+    std::cout << "Error: Could not Write Kurtosis Tensor Image: " << e << std::endl;
+    }
 }

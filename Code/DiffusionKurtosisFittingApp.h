@@ -19,12 +19,9 @@ public:
 
   void ComputeDiffusionAndKurtosis();
 
-  void ComputeMeanDiffusion();
-
   void WriteB0Image(std::string filename);
-  void WriteMDImage(std::string filename);
-
-  void PrintInfo();
+  void WriteDiffusionTensorImage(std::string filename);
+  void WriteKurtosisTensorImage(std::string filename);
 
 private:
 
