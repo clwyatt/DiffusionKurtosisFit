@@ -263,7 +263,7 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
     optimizer_init_x(x);
 
     // find optimum
-    if(b0 > 1000)
+    if(b0 > 1000) //TODO fix this hard coded threshold with Otsu
       {
       vnl_levenberg_marquardt minimizer(cost);
       if(!minimizer.minimize_without_gradient(x))

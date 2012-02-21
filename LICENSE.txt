@@ -1,5 +1,5 @@
 This software is released under a slightly modified "Simplified BSD License" or "FreeBSD License"
-(the modifications simply remore references to FreeBSD).
+(the modifications simply remove references to FreeBSD).
 
 Copyright (c) 2012, Bioimaging Systems Lab, Virginia Tech
 All rights reserved.
