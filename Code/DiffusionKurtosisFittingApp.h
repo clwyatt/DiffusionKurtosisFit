@@ -23,6 +23,10 @@ public:
   void WriteDiffusionTensorImage(std::string filename);
   void WriteKurtosisTensorImage(std::string filename);
 
+  void SetVerbosity(bool verbose)
+    {
+      m_verbose = verbose;
+    }
 private:
 
   void CollapseDWI();
@@ -37,5 +41,7 @@ private:
 
   B0ImageType::Pointer m_B0Image;
   MDImageType::Pointer m_MDImage;
+
+  bool m_verbose;
 };
 

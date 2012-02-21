@@ -12,6 +12,7 @@
 
 #include "DiffusionKurtosisFittingApp.h"
 #include "Optimizer.h"
+#include "ProgressMeter.h"
 
 #include <vnl/algo/vnl_symmetric_eigensystem.h>
 
@@ -240,10 +241,13 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
   B0ImageIteratorType b0It(m_B0Image, m_B0Image->GetLargestPossibleRegion() );
   TensorIteratorType dtIt( m_DiffusionTensorImage,  m_DiffusionTensorImage->GetLargestPossibleRegion() );
   TensorIteratorType ktIt( m_KurtosisTensorImage,  m_KurtosisTensorImage->GetLargestPossibleRegion() );
+  ProgressMeter meter(size[0]*size[1]*size[2], 40);
   for(dwiIt.GoToBegin(), b0It.GoToBegin(), dtIt.GoToBegin(), ktIt.GoToBegin();
       !dwiIt.IsAtEnd();
       ++dwiIt, ++b0It, ++dtIt, ++ktIt)
     {
+    meter.tick();
+
     // pull out vectors for this voxel and convert to vnl type
     DiffusionImageType::PixelType dwiVec = dwiIt.Get();
     vnl_vector<double> vnl_dwi(dwiVec.GetSize());
@@ -259,11 +263,14 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
     optimizer_init_x(x);
 
     // find optimum
-    vnl_levenberg_marquardt minimizer(cost);
-    if(!minimizer.minimize_without_gradient(x))
+    if(b0 > 1000)
       {
-      std::cout << "minimizer failed." << std::endl;
-      minimizer.diagnose_outcome();
+      vnl_levenberg_marquardt minimizer(cost);
+      if(!minimizer.minimize_without_gradient(x))
+	{
+	std::cout << "minimizer failed." << std::endl;
+	minimizer.diagnose_outcome();
+	}
       }
 
     // fill Diffusion tensor after shifting negative eigenvalues
@@ -302,6 +309,9 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
       ktVec[i-6] = x[i];
       }
     ktIt.Set(ktVec);
+
+    meter.tock();
+    if(m_verbose) meter.render();
     }
 }
 

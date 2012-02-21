@@ -1,7 +1,20 @@
 * TODO Items
+
+** the code needs a lot of cleanup and refactoring
+
 ** verify the mean kurtosis output
+
 ** add option to smooth inputs first
-** seperate code to dump nrrd header and data into different formats
-** use a file format that allows streaming in ITK
+
+** add option to save norm of fit residual for each voxel
+
+** add mask input to specify what region to performs fits
+*** requires a default value be used in nonmask locations (problematic)
+
+** look into threading the computation and/or using MPI
+** each fit take from to ? to 800 ms
+
+** seperate code to dump nrrd header and data into different formats or reuse unu join
+*** use a file format that allows streaming in ITK
 *** according to this page only Meta Image fully supports streaming
 *** http://www.kitware.com/products/html/IOStreamingInITK.html
