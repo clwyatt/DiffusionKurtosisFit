@@ -22,6 +22,7 @@ public:
   void WriteB0Image(std::string filename);
   void WriteDiffusionTensorImage(std::string filename);
   void WriteKurtosisTensorImage(std::string filename);
+  void WriteResidualImage(std::string filename);
 
   void SetVerbosity(bool verbose)
     {
@@ -41,6 +42,7 @@ private:
 
   B0ImageType::Pointer m_B0Image;
   MDImageType::Pointer m_MDImage;
+  MDImageType::Pointer m_ResidualImage;
 
   bool m_verbose;
 };

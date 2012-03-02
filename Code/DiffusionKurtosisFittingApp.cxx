@@ -233,18 +233,27 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
   m_KurtosisTensorImage->SetVectorLength( 15 );
   m_KurtosisTensorImage->Allocate();
 
+  m_ResidualImage = MDImageType::New();
+  m_ResidualImage->SetRegions( region );
+  m_ResidualImage->SetOrigin( origin );
+  m_ResidualImage->SetSpacing( spacing );
+  m_ResidualImage->SetDirection( direction );
+  m_ResidualImage->Allocate();
+
   typedef itk::ImageRegionIterator<DiffusionImageType> DiffusionIteratorType;
   typedef itk::ImageRegionIterator<TensorImageType> TensorIteratorType;
   typedef itk::ImageRegionIterator<B0ImageType> B0ImageIteratorType;
+  typedef itk::ImageRegionIterator<MDImageType> ResidualImageIteratorType;
 
   DiffusionIteratorType dwiIt(m_FullEncodingImage, m_FullEncodingImage->GetLargestPossibleRegion() );
   B0ImageIteratorType b0It(m_B0Image, m_B0Image->GetLargestPossibleRegion() );
   TensorIteratorType dtIt( m_DiffusionTensorImage,  m_DiffusionTensorImage->GetLargestPossibleRegion() );
   TensorIteratorType ktIt( m_KurtosisTensorImage,  m_KurtosisTensorImage->GetLargestPossibleRegion() );
+  ResidualImageIteratorType resIt( m_ResidualImage,  m_ResidualImage->GetLargestPossibleRegion() );
   ProgressMeter meter(size[0]*size[1]*size[2], 40);
-  for(dwiIt.GoToBegin(), b0It.GoToBegin(), dtIt.GoToBegin(), ktIt.GoToBegin();
+  for(dwiIt.GoToBegin(), b0It.GoToBegin(), dtIt.GoToBegin(), ktIt.GoToBegin(), resIt.GoToBegin();
       !dwiIt.IsAtEnd();
-      ++dwiIt, ++b0It, ++dtIt, ++ktIt)
+      ++dwiIt, ++b0It, ++dtIt, ++ktIt, ++ resIt)
     {
     meter.tick();
 
@@ -266,11 +275,17 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
     if(b0 > 1000) //TODO fix this hard coded threshold with Otsu
       {
       vnl_levenberg_marquardt minimizer(cost);
+      minimizer.set_max_function_evals(10000);
       if(!minimizer.minimize_without_gradient(x))
 	{
 	std::cout << "minimizer failed." << std::endl;
 	minimizer.diagnose_outcome();
 	}
+      resIt.Set( minimizer.get_end_error() );
+      }
+    else
+      {
+      resIt.Set(0);
       }
 
     // fill Diffusion tensor after shifting negative eigenvalues
@@ -329,6 +344,22 @@ void DiffusionKurtosisFittingApp::WriteB0Image(std::string filename)
   catch (itk::ExceptionObject e)
     {
     std::cout << "Error: Could not Write B0 Image: " << e << std::endl;
+    }
+}
+
+void DiffusionKurtosisFittingApp::WriteResidualImage(std::string filename)
+{
+  typedef itk::ImageFileWriter<MDImageType> FileWriterType;
+  FileWriterType::Pointer writer = FileWriterType::New();
+  writer->SetFileName( filename.c_str() );
+  writer->SetInput(m_ResidualImage);
+  try
+    {
+    writer->Update();
+    }
+  catch (itk::ExceptionObject e)
+    {
+    std::cout << "Error: Could not Write Residual Image: " << e << std::endl;
     }
 }
 

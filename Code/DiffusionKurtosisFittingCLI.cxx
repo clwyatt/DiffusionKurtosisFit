@@ -65,6 +65,6 @@ int main(int argc, char** argv)
   app.WriteB0Image(b0_outfile());
   app.WriteDiffusionTensorImage(dti_outfile());
   app.WriteKurtosisTensorImage(dki_outfile());
-
+  app.WriteResidualImage(std::string("fit_residual.nii.gz"));
   return EXIT_SUCCESS;
 }
