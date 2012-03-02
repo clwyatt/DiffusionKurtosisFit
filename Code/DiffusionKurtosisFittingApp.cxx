@@ -264,28 +264,69 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
 
     InternalPixelType b0 = b0It.Get();
 
-    // construct cost function
-    optimizer_cost_function cost(&vnl_dwi, b0, &m_dwiEncodings);
-
-    // initialize x
+    // initialize kurtosis parameters
     vnl_vector<double> x(21);
     optimizer_init_x(x);
 
-    // find optimum
-    if(b0 > 1000) //TODO fix this hard coded threshold with Otsu
+    if(b0 > 1000)
       {
-      vnl_levenberg_marquardt minimizer(cost);
+      // construct diffusion cost function
+      diffusion_cost_function diffusionCost(&vnl_dwi, b0, &m_dwiEncodings);
+
+      // initialize diffusion paramters
+      vnl_vector<double> diffusionParameters(6);
+      diffusion_init_x(diffusionParameters);
+
+      // find optimum of diffusion for initialization
+      vnl_levenberg_marquardt minimizer(diffusionCost);
       minimizer.set_max_function_evals(10000);
-      if(!minimizer.minimize_without_gradient(x))
+      minimizer.minimize_without_gradient(diffusionParameters);
+
+      // shift negative eigenvalues
+      vnl_matrix<double> DT1(3,3);
+      DT1(0,0) = diffusionParameters[0];
+      DT1(0,1) = diffusionParameters[1];
+      DT1(0,2) = diffusionParameters[2];
+      DT1(1,0) = diffusionParameters[1];
+      DT1(1,1) = diffusionParameters[3];
+      DT1(1,2) = diffusionParameters[4];
+      DT1(2,0) = diffusionParameters[2];
+      DT1(2,1) = diffusionParameters[4];
+      DT1(2,2) = diffusionParameters[5];
+
+      vnl_symmetric_eigensystem<double> E1(DT1);
+
+      if(E1.get_eigenvalue(0) < 0)
+	{
+	diffusionParameters[0] += -E1.get_eigenvalue(0);
+	diffusionParameters[3] += -E1.get_eigenvalue(0);
+	diffusionParameters[5] += -E1.get_eigenvalue(0);
+	}
+
+      // construct kurtosis cost function
+      optimizer_cost_function cost(&vnl_dwi, b0, &m_dwiEncodings);
+
+      x[0] = diffusionParameters[0];
+      x[1] = diffusionParameters[1];
+      x[2] = diffusionParameters[2];
+      x[3] = diffusionParameters[3];
+      x[4] = diffusionParameters[4];
+      x[5] = diffusionParameters[5];
+
+      // find optimum
+      vnl_levenberg_marquardt minimizer2(cost);
+      minimizer2.set_max_function_evals(10000);
+      if(!minimizer2.minimize_without_gradient(x))
 	{
 	std::cout << "minimizer failed." << std::endl;
-	minimizer.diagnose_outcome();
+	minimizer2.diagnose_outcome();
 	}
-      resIt.Set( minimizer.get_end_error() );
+
+      resIt.Set( minimizer2.get_end_error() );
       }
     else
       {
-      resIt.Set(0);
+      resIt.Set( 0 );
       }
 
     // fill Diffusion tensor after shifting negative eigenvalues

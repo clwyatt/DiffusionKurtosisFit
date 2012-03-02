@@ -168,12 +168,14 @@ void ComputeMeanKurtosis()
 	    for(unsigned int k = 0; k < 3; ++k)
 	      for(unsigned int l = 0; l < 3; ++l)
 		{
-		kapp += (g[i]*g[j]*g[k]*g[l]*ktVec[K[i][j][k][l]]-6)/(dapp*dapp);
+		kapp += (g[i]*g[j]*g[k]*g[l]*ktVec[K[i][j][k][l]-6]);
 		}
 	meankurt += kapp;
 	}
       double value = meankurt/static_cast<double>(numNonZeroEncodings);
-      
+      // if (value > 10) value = 10;
+      // if (value < -10) value = -10;
+
       mdIt.Set(value);
       }
 }
@@ -223,7 +225,12 @@ void WriteKurtosisComponents(std::string basename)
     for ( ktIt.GoToBegin(), tempIt.GoToBegin(); !ktIt.IsAtEnd(); ++ktIt, ++tempIt)
       {
       TensorImageType::PixelType ktVec = ktIt.Get();
-      tempIt.Set(ktVec[componentIndex]);
+      double value = ktVec[componentIndex];
+
+      // if(value > 10) value = 10;
+      // if(value < -10) value = -10;
+
+      tempIt.Set(value);
       }
 
     typedef itk::ImageFileWriter<MDImageType> FileWriterType;
