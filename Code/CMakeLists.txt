@@ -21,3 +21,8 @@ ADD_EXECUTABLE( dwisim
 DiffusionSimulateCLI.cxx)
 
 TARGET_LINK_LIBRARIES ( dwisim vul ${ITK_LIBRARIES})
+
+ADD_EXECUTABLE( dwifilter
+DiffusionFilterCLI.cxx)
+
+TARGET_LINK_LIBRARIES ( dwifilter vul ${ITK_LIBRARIES})
