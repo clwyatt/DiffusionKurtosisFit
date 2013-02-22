@@ -63,8 +63,6 @@ void ReadDiffusionTensorImage(std::string filename)
 void ComputeMeanDiffusion()
 {
   TensorImageType::RegionType region = dtImage->GetLargestPossibleRegion();
-  TensorImageType::RegionType::IndexType index = region.GetIndex();
-  TensorImageType::RegionType::SizeType size = region.GetSize();
   TensorImageType::PointType origin = dtImage->GetOrigin();
   TensorImageType::SpacingType spacing = dtImage->GetSpacing();
   TensorImageType::DirectionType direction = dtImage->GetDirection();

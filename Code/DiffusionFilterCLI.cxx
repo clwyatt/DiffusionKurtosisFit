@@ -83,8 +83,6 @@ bool WriteDWI( const std::string &file )
 void FilterDWI(double fwhm)
 {
   DiffusionImageType::RegionType region = dwiImage->GetLargestPossibleRegion();
-  DiffusionImageType::RegionType::IndexType index = region.GetIndex();
-  DiffusionImageType::RegionType::SizeType size = region.GetSize();
   DiffusionImageType::PointType origin = dwiImage->GetOrigin();
   DiffusionImageType::SpacingType spacing = dwiImage->GetSpacing();
   DiffusionImageType::DirectionType direction = dwiImage->GetDirection();

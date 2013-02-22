@@ -123,8 +123,6 @@ void ReadEncodings(std::string filename)
 void ComputeMeanKurtosis()
 {
   TensorImageType::RegionType region = ktImage->GetLargestPossibleRegion();
-  TensorImageType::RegionType::IndexType index = region.GetIndex();
-  TensorImageType::RegionType::SizeType size = region.GetSize();
   TensorImageType::PointType origin = ktImage->GetOrigin();
   TensorImageType::SpacingType spacing = ktImage->GetSpacing();
   TensorImageType::DirectionType direction = ktImage->GetDirection();
@@ -200,8 +198,6 @@ void WriteKurtosisComponents(std::string basename)
 {
 
   TensorImageType::RegionType region = ktImage->GetLargestPossibleRegion();
-  TensorImageType::RegionType::IndexType index = region.GetIndex();
-  TensorImageType::RegionType::SizeType size = region.GetSize();
   TensorImageType::PointType origin = ktImage->GetOrigin();
   TensorImageType::SpacingType spacing = ktImage->GetSpacing();
   TensorImageType::DirectionType direction = ktImage->GetDirection();

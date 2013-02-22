@@ -141,8 +141,6 @@ void ReadEncodings(std::string filename)
 void ComputeDWI()
 {
   TensorImageType::RegionType region = ktImage->GetLargestPossibleRegion();
-  TensorImageType::RegionType::IndexType index = region.GetIndex();
-  TensorImageType::RegionType::SizeType size = region.GetSize();
   TensorImageType::PointType origin = ktImage->GetOrigin();
   TensorImageType::SpacingType spacing = ktImage->GetSpacing();
   TensorImageType::DirectionType direction = ktImage->GetDirection();
@@ -162,7 +160,7 @@ void ComputeDWI()
   TensorIteratorType ktIt(ktImage, ktImage->GetLargestPossibleRegion() );
   TensorIteratorType dtIt(dtImage, dtImage->GetLargestPossibleRegion() );
   TensorIteratorType dwiIt(dwiImage, dwiImage->GetLargestPossibleRegion() );
-  for ( ktIt.GoToBegin(), dtIt.GoToBegin(), dwiIt.GoToBegin(), b0It.GoToBegin(); 
+  for ( ktIt.GoToBegin(), dtIt.GoToBegin(), dwiIt.GoToBegin(), b0It.GoToBegin();
 	!ktIt.IsAtEnd();
 	++ktIt, ++dwiIt, ++dtIt, ++b0It)
       {

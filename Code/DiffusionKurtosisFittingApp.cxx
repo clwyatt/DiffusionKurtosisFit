@@ -130,8 +130,6 @@ void DiffusionKurtosisFittingApp::CollapseDWI()
   assert(m_dwiImages.size() > 0);
 
   DiffusionImageType::RegionType region = m_dwiImages[0]->GetLargestPossibleRegion();
-  DiffusionImageType::RegionType::IndexType index = region.GetIndex();
-  DiffusionImageType::RegionType::SizeType size = region.GetSize();
   DiffusionImageType::PointType origin = m_dwiImages[0]->GetOrigin();
   DiffusionImageType::SpacingType spacing = m_dwiImages[0]->GetSpacing();
   DiffusionImageType::DirectionType direction = m_dwiImages[0]->GetDirection();
@@ -176,8 +174,6 @@ void DiffusionKurtosisFittingApp::CollapseDWI()
 void DiffusionKurtosisFittingApp::ComputeB0Image()
 {
   DiffusionImageType::RegionType region = m_FullEncodingImage->GetLargestPossibleRegion();
-  DiffusionImageType::RegionType::IndexType index = region.GetIndex();
-  DiffusionImageType::RegionType::SizeType size = region.GetSize();
   DiffusionImageType::PointType origin = m_FullEncodingImage->GetOrigin();
   DiffusionImageType::SpacingType spacing = m_FullEncodingImage->GetSpacing();
   DiffusionImageType::DirectionType direction = m_FullEncodingImage->GetDirection();
@@ -211,7 +207,6 @@ void DiffusionKurtosisFittingApp::ComputeB0Image()
 void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
 {
   DiffusionImageType::RegionType region = m_FullEncodingImage->GetLargestPossibleRegion();
-  DiffusionImageType::RegionType::IndexType index = region.GetIndex();
   DiffusionImageType::RegionType::SizeType size = region.GetSize();
   DiffusionImageType::PointType origin = m_FullEncodingImage->GetOrigin();
   DiffusionImageType::SpacingType spacing = m_FullEncodingImage->GetSpacing();
