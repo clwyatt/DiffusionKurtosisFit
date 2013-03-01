@@ -171,8 +171,8 @@ void ComputeMeanKurtosis()
 	meankurt += kapp;
 	}
       double value = meankurt/static_cast<double>(numNonZeroEncodings);
-      // if (value > 10) value = 10;
-      // if (value < -10) value = -10;
+      if (value > 500) value = 500;
+      if (value < 0) value = 0;
 
       mdIt.Set(value);
       }

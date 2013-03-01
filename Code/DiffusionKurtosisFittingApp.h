@@ -13,8 +13,6 @@ public:
 
   bool ReadDWI(std::vector< std::string > files);
 
-  bool CheckCompatibilityDWI();
-
   void ComputeB0Image();
 
   void ComputeDiffusionAndKurtosis();
@@ -24,14 +22,11 @@ public:
   void WriteKurtosisTensorImage(std::string filename);
   void WriteResidualImage(std::string filename);
 
-  void SetVerbosity(bool verbose)
-    {
-      m_verbose = verbose;
-    }
 private:
 
+  bool CheckCompatibilityDWI();
   void CollapseDWI();
-  void ComputeNonZeroEncodings();
+  void AllocateResult();
 
   unsigned int m_NumberZeroEncodings, m_NumberNonZeroEncodings;
   std::vector<DiffusionImageType::Pointer> m_dwiImages;
@@ -43,7 +38,4 @@ private:
   B0ImageType::Pointer m_B0Image;
   MDImageType::Pointer m_MDImage;
   MDImageType::Pointer m_ResidualImage;
-
-  bool m_verbose;
 };
-

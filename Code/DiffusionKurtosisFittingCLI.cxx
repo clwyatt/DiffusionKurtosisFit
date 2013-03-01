@@ -43,11 +43,9 @@ int main(int argc, char** argv)
   vul_arg<std::string> b0_outfile("-b", "Output B0 File", "B0_output.nii.gz");
   vul_arg<std::string> dti_outfile("-d", "Output Diffusion Tensor File", "DTI_output.nii.gz");
   vul_arg<std::string> dki_outfile("-k", "Output Diffusion Kurtosis Tensor File", "DKI_output.nii.gz");
-  vul_arg<bool> verbose("-v", "Write progress output to stdout.", false);
   vul_arg_parse(argc, argv);
 
   DiffusionKurtosisFittingApp app;
-  app.SetVerbosity( verbose() );
 
   app.ReadEncodings(infiles());
   if(!app.ReadDWI(infiles()) )
@@ -55,10 +53,8 @@ int main(int argc, char** argv)
     std::cout << "Error: DWI images cannot be read or are incompatible" << std::endl;
     return EXIT_FAILURE;
     }
-  if(verbose()) std::cout << "Input Completed." << std::endl;
 
   app.ComputeB0Image();
-  if(verbose()) std::cout << "B0 Computation Completed." << std::endl;
 
   app.ComputeDiffusionAndKurtosis();
 

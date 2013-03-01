@@ -2,8 +2,7 @@
 ADD_EXECUTABLE( dkifit
 Optimizer.cxx
 DiffusionKurtosisFittingApp.cxx
-DiffusionKurtosisFittingCLI.cxx
-ProgressMeter.cxx)
+DiffusionKurtosisFittingCLI.cxx)
 
 TARGET_LINK_LIBRARIES ( dkifit vul ${ITK_LIBRARIES})
 
@@ -16,13 +15,3 @@ ADD_EXECUTABLE( dkiscalars
 KurtosisScalarsCLI.cxx)
 
 TARGET_LINK_LIBRARIES ( dkiscalars vul ${ITK_LIBRARIES})
-
-ADD_EXECUTABLE( dwisim
-DiffusionSimulateCLI.cxx)
-
-TARGET_LINK_LIBRARIES ( dwisim vul ${ITK_LIBRARIES})
-
-ADD_EXECUTABLE( dwifilter
-DiffusionFilterCLI.cxx)
-
-TARGET_LINK_LIBRARIES ( dwifilter vul ${ITK_LIBRARIES})

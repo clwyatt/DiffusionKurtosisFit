@@ -11,8 +11,8 @@
 #include <itkImageRegionIterator.h>
 
 #include "DiffusionKurtosisFittingApp.h"
+
 #include "Optimizer.h"
-#include "ProgressMeter.h"
 
 #include <vnl/algo/vnl_symmetric_eigensystem.h>
 
@@ -204,10 +204,9 @@ void DiffusionKurtosisFittingApp::ComputeB0Image()
       }
 }
 
-void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
+void DiffusionKurtosisFittingApp::AllocateResult()
 {
   DiffusionImageType::RegionType region = m_FullEncodingImage->GetLargestPossibleRegion();
-  DiffusionImageType::RegionType::SizeType size = region.GetSize();
   DiffusionImageType::PointType origin = m_FullEncodingImage->GetOrigin();
   DiffusionImageType::SpacingType spacing = m_FullEncodingImage->GetSpacing();
   DiffusionImageType::DirectionType direction = m_FullEncodingImage->GetDirection();
@@ -234,6 +233,17 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
   m_ResidualImage->SetSpacing( spacing );
   m_ResidualImage->SetDirection( direction );
   m_ResidualImage->Allocate();
+}
+
+void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
+{
+  AllocateResult();
+
+  Optimizer opt(m_dwiEncodings);
+
+  vnl_vector_fixed<double, 21> X;
+
+  //unsigned int tempdbg = 0;
 
   typedef itk::ImageRegionIterator<DiffusionImageType> DiffusionIteratorType;
   typedef itk::ImageRegionIterator<TensorImageType> TensorIteratorType;
@@ -245,124 +255,61 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
   TensorIteratorType dtIt( m_DiffusionTensorImage,  m_DiffusionTensorImage->GetLargestPossibleRegion() );
   TensorIteratorType ktIt( m_KurtosisTensorImage,  m_KurtosisTensorImage->GetLargestPossibleRegion() );
   ResidualImageIteratorType resIt( m_ResidualImage,  m_ResidualImage->GetLargestPossibleRegion() );
-  ProgressMeter meter(size[0]*size[1]*size[2], 40);
   for(dwiIt.GoToBegin(), b0It.GoToBegin(), dtIt.GoToBegin(), ktIt.GoToBegin(), resIt.GoToBegin();
       !dwiIt.IsAtEnd();
-      ++dwiIt, ++b0It, ++dtIt, ++ktIt, ++ resIt)
+      ++dwiIt, ++b0It, ++dtIt, ++ktIt, ++resIt)
     {
-    meter.tick();
+      // pull out dwi vector for this voxel
+      DiffusionImageType::PixelType dwiVec = dwiIt.Get();
 
-    // pull out vectors for this voxel and convert to vnl type
-    DiffusionImageType::PixelType dwiVec = dwiIt.Get();
-    vnl_vector<double> vnl_dwi(dwiVec.GetSize());
-    for(unsigned int i = 0; i < dwiVec.GetSize(); ++i) vnl_dwi[i] = dwiVec[i];
+      opt.SetDWI(dwiVec);
 
-    InternalPixelType b0 = b0It.Get();
+      // use previous result as initial condition
+      double norm = opt.solve(X);
 
-    // initialize kurtosis parameters
-    vnl_vector<double> x(21);
-    optimizer_init_x(x);
+      // if(tempdbg > 58) break;
+      // tempdbg +=1;
 
-    if(b0 > 1000)
-      {
-      // construct diffusion cost function
-      diffusion_cost_function diffusionCost(&vnl_dwi, b0, &m_dwiEncodings);
+      resIt.Set(norm);
 
-      // initialize diffusion paramters
-      vnl_vector<double> diffusionParameters(6);
-      diffusion_init_x(diffusionParameters);
-
-      // find optimum of diffusion for initialization
-      vnl_levenberg_marquardt minimizer(diffusionCost);
-      minimizer.set_max_function_evals(10000);
-      minimizer.minimize_without_gradient(diffusionParameters);
+      // fill Diffusion tensor after shifting negative eigenvalues
+      TensorImageType::PixelType dtVec = dtIt.Get();
+      for(unsigned int i = 0; i < 6; ++i)
+	{
+	  dtVec[i] = X[i];
+	}
 
       // shift negative eigenvalues
-      vnl_matrix<double> DT1(3,3);
-      DT1(0,0) = diffusionParameters[0];
-      DT1(0,1) = diffusionParameters[1];
-      DT1(0,2) = diffusionParameters[2];
-      DT1(1,0) = diffusionParameters[1];
-      DT1(1,1) = diffusionParameters[3];
-      DT1(1,2) = diffusionParameters[4];
-      DT1(2,0) = diffusionParameters[2];
-      DT1(2,1) = diffusionParameters[4];
-      DT1(2,2) = diffusionParameters[5];
+      vnl_matrix<double> DT(3,3);
+      DT(0,0) = dtVec[0];
+      DT(0,1) = dtVec[1];
+      DT(0,2) = dtVec[2];
+      DT(1,0) = dtVec[1];
+      DT(1,1) = dtVec[3];
+      DT(1,2) = dtVec[4];
+      DT(2,0) = dtVec[2];
+      DT(2,1) = dtVec[4];
+      DT(2,2) = dtVec[5];
 
-      vnl_symmetric_eigensystem<double> E1(DT1);
-
-      if(E1.get_eigenvalue(0) < 0)
+      vnl_symmetric_eigensystem<double> E(DT);
+      if(E.get_eigenvalue(0) < 0)
 	{
-	diffusionParameters[0] += -E1.get_eigenvalue(0);
-	diffusionParameters[3] += -E1.get_eigenvalue(0);
-	diffusionParameters[5] += -E1.get_eigenvalue(0);
+	  dtVec[0] += -E.get_eigenvalue(0);
+	  dtVec[3] += -E.get_eigenvalue(0);
+	  dtVec[5] += -E.get_eigenvalue(0);
 	}
+      dtIt.Set(dtVec);
 
-      // construct kurtosis cost function
-      optimizer_cost_function cost(&vnl_dwi, b0, &m_dwiEncodings);
+      double meanDiff = (dtVec[0]+dtVec[3]+dtVec[5])/3;
 
-      x[0] = diffusionParameters[0];
-      x[1] = diffusionParameters[1];
-      x[2] = diffusionParameters[2];
-      x[3] = diffusionParameters[3];
-      x[4] = diffusionParameters[4];
-      x[5] = diffusionParameters[5];
-
-      // find optimum
-      vnl_levenberg_marquardt minimizer2(cost);
-      minimizer2.set_max_function_evals(10000);
-      if(!minimizer2.minimize_without_gradient(x))
+      // fill Kurtosis tensor
+      TensorImageType::PixelType ktVec = ktIt.Get();
+      for(unsigned int i = 6; i < 21; ++i)
 	{
-	std::cout << "minimizer failed." << std::endl;
-	minimizer2.diagnose_outcome();
+	  ktVec[i-6] = X[i]/(meanDiff*meanDiff);
 	}
+      ktIt.Set(ktVec);
 
-      resIt.Set( minimizer2.get_end_error() );
-      }
-    else
-      {
-      resIt.Set( 0 );
-      }
-
-    // fill Diffusion tensor after shifting negative eigenvalues
-    TensorImageType::PixelType dtVec = dtIt.Get();
-    for(unsigned int i = 0; i < 6; ++i)
-      {
-      dtVec[i] = x[i];
-      }
-
-    // shift negative eigenvalues
-    vnl_matrix<double> DT(3,3);
-    DT(0,0) = dtVec[0];
-    DT(0,1) = dtVec[1];
-    DT(0,2) = dtVec[2];
-    DT(1,0) = dtVec[1];
-    DT(1,1) = dtVec[3];
-    DT(1,2) = dtVec[4];
-    DT(2,0) = dtVec[2];
-    DT(2,1) = dtVec[4];
-    DT(2,2) = dtVec[5];
-
-    vnl_symmetric_eigensystem<double> E(DT);
-
-    if(E.get_eigenvalue(0) < 0)
-      {
-      dtVec[0] += -E.get_eigenvalue(0);
-      dtVec[3] += -E.get_eigenvalue(0);
-      dtVec[5] += -E.get_eigenvalue(0);
-      }
-    dtIt.Set(dtVec);
-
-    // fill Kurtosis tensor
-    TensorImageType::PixelType ktVec = ktIt.Get();
-    for(unsigned int i = 6; i < 21; ++i)
-      {
-      ktVec[i-6] = x[i];
-      }
-    ktIt.Set(ktVec);
-
-    meter.tock();
-    if(m_verbose) meter.render();
     }
 }
 

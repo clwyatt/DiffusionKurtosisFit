@@ -1,56 +1,37 @@
-#include <cmath>
+#include <vector>
 
+#include <vnl/vnl_matrix.h>
 #include <vnl/vnl_vector.h>
-#include <vnl/vnl_least_squares_function.h>
-#include <vnl/algo/vnl_levenberg_marquardt.h>
 
 #include "Types.h"
 
-class optimizer_cost_function: public vnl_least_squares_function
+class Optimizer
 {
 public:
+  Optimizer(const std::vector<DiffusionEncodingDirection> &encodings);
 
-  optimizer_cost_function(vnl_vector<double> *lhs, 
-			  double B0, 
-			  std::vector<DiffusionEncodingDirection> *encodings)
-    : vnl_least_squares_function(21, lhs->size(), vnl_least_squares_function::no_gradient)
-    {
-      m_lhs = lhs;
-      m_encodings = encodings;
-      m_logB0 = log(B0);
-    }
+  void SetDWI(const DiffusionImageType::PixelType &dwi);
 
-  void f(vnl_vector< double > const &x, vnl_vector< double > &fx);
+  double solve(vnl_vector_fixed<double, 21> &X);
 
 private:
+  Optimizer(){};
+  unsigned int violated_constraints(vnl_vector_fixed<double, 21> &X);
+  double ULLS(vnl_vector_fixed<double, 21> & X);
+  double InteriorPointMethod(vnl_vector_fixed<double, 21> & X);
+  void Newton(double t, vnl_vector_fixed<double, 21> & X);
+  double SolutionNorm(vnl_vector_fixed<double, 21> & X);
 
-  vnl_vector<double> *m_lhs;
-  std::vector<DiffusionEncodingDirection> *m_encodings;
-  double m_logB0;
+  std::vector<DiffusionEncodingDirection> full_encodings;
+  std::vector<DiffusionEncodingDirection> nonzero_encodings;
+  double bmax;
+
+  static const double t0 = 1e-8;
+  static const double tmu = 1.5;
+  static const double teps = 0.01;
+
+  vnl_matrix<double> A, C, ATA;
+  vnl_vector<double> B, ATB;
+
+  vnl_vector_fixed<double, 21> initialX;
 };
-
-class diffusion_cost_function: public vnl_least_squares_function
-{
-public:
-
-  diffusion_cost_function(vnl_vector<double> *lhs, 
-			  double B0, 
-			  std::vector<DiffusionEncodingDirection> *encodings)
-    : vnl_least_squares_function(6, lhs->size(), vnl_least_squares_function::no_gradient)
-    {
-      m_lhs = lhs;
-      m_encodings = encodings;
-      m_logB0 = log(B0);
-    }
-
-  void f(vnl_vector< double > const &x, vnl_vector< double > &fx);
-
-private:
-
-  vnl_vector<double> *m_lhs;
-  std::vector<DiffusionEncodingDirection> *m_encodings;
-  double m_logB0;
-};
-
-void optimizer_init_x(vnl_vector<double> & x);
-void diffusion_init_x(vnl_vector<double> & x);
