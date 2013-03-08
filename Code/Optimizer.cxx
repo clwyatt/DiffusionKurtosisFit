@@ -58,38 +58,31 @@ Optimizer::Optimizer(const std::vector<DiffusionEncodingDirection> &encodings)
   // B is N x 1
   B = vnl_vector<double>(N);
 
-  // initial condition is spherical diffusion, small kurtosis
-  // note some care is needed here to ensure that any constraint
-  // is negative, but not too close to zero
-  for(unsigned int i = 0; i < 21; i++) initialX[i] = 0;
-  initialX[0] = 1; initialX[3] = 1; initialX[5] = 1;
-  initialX[6] = 1e-5; initialX[16] = 1e-5; initialX[20] = 1e-5;
-
 }
 
-void Optimizer::SetDWI(const DiffusionImageType::PixelType &dwi)
+void Optimizer::SetDWI(double * data)
 {
-  double B0 = 0;
+  double B0 = 0.;
   unsigned int numZeroEncodings = 0;
-  for(unsigned int i = 0; i < dwi.GetSize(); ++i)
+  for(unsigned int i = 0; i < full_encodings.size(); ++i)
     {
       DiffusionEncodingDirection n = full_encodings[i];
       if(n.isZero())
 	{
 	  numZeroEncodings += 1;
-	  B0 += dwi[i];
+	  B0 += data[i];
 	}
     }
 
   B0 = B0/numZeroEncodings;
 
   unsigned int d = 0;
-  for(unsigned int i = 0; i < dwi.GetSize(); ++i)
+  for(unsigned int i = 0; i < full_encodings.size(); ++i)
     {
       DiffusionEncodingDirection n = full_encodings[i];
       if(!n.isZero())
 	{
-	  B[d] = log(dwi[i]/B0);
+	  B[d] = log(data[i]/B0);
 	  d += 1;
 	}
     }
@@ -161,7 +154,7 @@ void Optimizer::Newton(double t, vnl_vector_fixed<double, 21> & X)
 	      }
 	}
 
-      vnl_vector<double> update =  vnl_matrix_inverse<double>(H)*grad;
+      vnl_vector<double> update =  vnl_svd<double>(H).solve(grad);
       X = X - update;
 
       updatenorm = norm(update);
@@ -190,7 +183,6 @@ double Optimizer::InteriorPointMethod(vnl_vector_fixed<double, 21> & X)
 {
   unsigned int N = nonzero_encodings.size();
 
-  X = initialX;
   double t = t0;
   while( (3*N)/t > teps )
     {
@@ -208,21 +200,16 @@ double Optimizer::InteriorPointMethod(vnl_vector_fixed<double, 21> & X)
 
 double Optimizer::solve(vnl_vector_fixed<double, 21> &X)
 {
-  double norm = ULLS(X);
-  if(violated_constraints(X) > 0)
+  vnl_vector_fixed<double, 21> T;
+  double norm = ULLS(T);
+  if(violated_constraints(T) > 0)
     {
       norm = InteriorPointMethod(X);
     }
-  // else
-  //   {
-  //     std::cout << "ULLS ok, skipping interior point" << std::endl;
-  //   }
-  // std::cout << "Number of constaints violated = " << violated_constraints(X) << std::endl;
-  // std::cout << "Solution Norm = " << SolutionNorm(X) << std::endl;
-
-  // std::cout << "Solution = ";
-  // for(unsigned int i = 0; i < 21; ++i) std::cout << X[i] << ", ";
-  // std::cout << std::endl;
+  else
+    {
+      X = T;
+    }
 
   return norm;
 }

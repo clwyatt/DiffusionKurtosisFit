@@ -10,7 +10,7 @@ class Optimizer
 public:
   Optimizer(const std::vector<DiffusionEncodingDirection> &encodings);
 
-  void SetDWI(const DiffusionImageType::PixelType &dwi);
+  void SetDWI(double * data);
 
   double solve(vnl_vector_fixed<double, 21> &X);
 
@@ -33,5 +33,4 @@ private:
   vnl_matrix<double> A, C, ATA;
   vnl_vector<double> B, ATB;
 
-  vnl_vector_fixed<double, 21> initialX;
 };

@@ -18,8 +18,7 @@
 
 DiffusionKurtosisFittingApp::DiffusionKurtosisFittingApp()
 {
-  m_NumberZeroEncodings = 0;
-  m_NumberNonZeroEncodings = 0;
+  m_NumberVoxels = 0;
 }
 
 bool DiffusionKurtosisFittingApp::ReadEncodings(std::vector< std::string > files)
@@ -52,8 +51,6 @@ bool DiffusionKurtosisFittingApp::ReadEncodings(std::vector< std::string > files
 	{
 	iss >> encoding.gx >> encoding.gy >> encoding.gz;
 	m_dwiEncodings.push_back(encoding);
-	if(encoding.isZero() ) m_NumberZeroEncodings += 1;
-	else m_NumberNonZeroEncodings += 1;
 	}
       free(key); free(value);
       key = NULL; value = NULL;
@@ -85,6 +82,12 @@ bool DiffusionKurtosisFittingApp::ReadDWI(std::vector< std::string > files)
       return false;
       }
     }
+
+  // output image geometry information is taken from the first dwi image
+  m_region = m_dwiImages[0]->GetLargestPossibleRegion();
+  m_origin = m_dwiImages[0]->GetOrigin();
+  m_spacing = m_dwiImages[0]->GetSpacing();
+  m_direction = m_dwiImages[0]->GetDirection();
 
   if( !CheckCompatibilityDWI() ) return false;
 
@@ -130,175 +133,113 @@ void DiffusionKurtosisFittingApp::CollapseDWI()
   assert(m_dwiImages.size() > 0);
 
   DiffusionImageType::RegionType region = m_dwiImages[0]->GetLargestPossibleRegion();
-  DiffusionImageType::PointType origin = m_dwiImages[0]->GetOrigin();
-  DiffusionImageType::SpacingType spacing = m_dwiImages[0]->GetSpacing();
-  DiffusionImageType::DirectionType direction = m_dwiImages[0]->GetDirection();
+  DiffusionImageType::RegionType::SizeType size = region.GetSize();
 
-  m_FullEncodingImage = DiffusionImageType::New();
-  m_FullEncodingImage->SetRegions( region );
-  m_FullEncodingImage->SetOrigin( origin );
-  m_FullEncodingImage->SetSpacing( spacing );
-  m_FullEncodingImage->SetDirection( direction );
-  m_FullEncodingImage->SetVectorLength( m_NumberNonZeroEncodings + m_NumberZeroEncodings );
-  m_FullEncodingImage->Allocate();
+  m_NumberVoxels = size[0]*size[1]*size[2];
+  unsigned int numberEncodings = m_dwiEncodings.size();
+
+  dwiData = new double[m_NumberVoxels*numberEncodings];
 
   typedef itk::ImageRegionIterator<DiffusionImageType> IteratorType;
-  IteratorType newIt(m_FullEncodingImage, region);
   unsigned int encodingIndex = 0;
   for(unsigned int i = 0; i < m_dwiImages.size(); ++i)
     {
-    IteratorType nextIt(m_dwiImages[i], m_dwiImages[i]->GetLargestPossibleRegion());
-    nextIt.GoToBegin();
-    unsigned int numberEncodingsThisImage = nextIt.Get().GetSize();
-    for ( newIt.GoToBegin(); !newIt.IsAtEnd(); ++newIt, ++nextIt)
-      {
-      DiffusionImageType::PixelType newVec = newIt.Get();
-      DiffusionImageType::PixelType nextVec = nextIt.Get();
-      for(unsigned int j = 0; j < numberEncodingsThisImage; ++j)
+      IteratorType nextIt(m_dwiImages[i], m_dwiImages[i]->GetLargestPossibleRegion());
+      nextIt.GoToBegin();
+      unsigned int voxel = 0;
+      unsigned int numberEncodingsThisImage = nextIt.Get().GetSize();
+      for (; !nextIt.IsAtEnd(); ++nextIt)
 	{
-	if(nextVec[j] == 0) newVec[encodingIndex +j] = 1; // clip to
-							  // prevent
-							  // log(0) later
-	else newVec[encodingIndex +j] = nextVec[j];
+	  DiffusionImageType::PixelType nextVec = nextIt.Get();
+	  for(unsigned int j = 0; j < numberEncodingsThisImage; ++j)
+	    {
+	      // clip to prevent log(0) later
+	      double data = (nextVec[j] == 0) ? 1. : nextVec[j];
+	      dwiData[voxel*numberEncodings + encodingIndex +j] = data;
+	    }
+	  ++voxel;
 	}
-      newIt.Set(newVec);
-      }
-    encodingIndex += numberEncodingsThisImage;
+      encodingIndex += numberEncodingsThisImage;
     }
 
   // release original data
   m_dwiImages.clear();
-
-}
-
-void DiffusionKurtosisFittingApp::ComputeB0Image()
-{
-  DiffusionImageType::RegionType region = m_FullEncodingImage->GetLargestPossibleRegion();
-  DiffusionImageType::PointType origin = m_FullEncodingImage->GetOrigin();
-  DiffusionImageType::SpacingType spacing = m_FullEncodingImage->GetSpacing();
-  DiffusionImageType::DirectionType direction = m_FullEncodingImage->GetDirection();
-
-  m_B0Image = B0ImageType::New();
-  m_B0Image->SetRegions( region );
-  m_B0Image->SetOrigin( origin );
-  m_B0Image->SetSpacing( spacing );
-  m_B0Image->SetDirection( direction );
-  m_B0Image->Allocate();
-
-  typedef itk::ImageRegionIterator<DiffusionImageType> DWIIteratorType;
-  typedef itk::ImageRegionIterator<B0ImageType> B0IteratorType;
-
-  DWIIteratorType dwiIt(m_FullEncodingImage, region);
-  B0IteratorType b0It(m_B0Image, m_B0Image->GetLargestPossibleRegion() );
-  for ( dwiIt.GoToBegin(), b0It.GoToBegin(); !dwiIt.IsAtEnd(); ++dwiIt, ++b0It)
-      {
-      DiffusionImageType::PixelType dwiVec = dwiIt.Get();
-      InternalPixelType average = 0;
-      for(unsigned int j = 0; j < dwiVec.GetSize(); ++j)
-	{
-	if(m_dwiEncodings[j].isZero()) average += dwiVec[j]/m_NumberZeroEncodings;
-	}
-      if(average < 1) average = 1.; // clip to prevent problems with
-				    // tensor computations later
-      b0It.Set(average);
-      }
 }
 
 void DiffusionKurtosisFittingApp::AllocateResult()
 {
-  DiffusionImageType::RegionType region = m_FullEncodingImage->GetLargestPossibleRegion();
-  DiffusionImageType::PointType origin = m_FullEncodingImage->GetOrigin();
-  DiffusionImageType::SpacingType spacing = m_FullEncodingImage->GetSpacing();
-  DiffusionImageType::DirectionType direction = m_FullEncodingImage->GetDirection();
-
   m_DiffusionTensorImage = TensorImageType::New();
-  m_DiffusionTensorImage->SetRegions( region );
-  m_DiffusionTensorImage->SetOrigin( origin );
-  m_DiffusionTensorImage->SetSpacing( spacing );
-  m_DiffusionTensorImage->SetDirection( direction );
+  m_DiffusionTensorImage->SetRegions( m_region );
+  m_DiffusionTensorImage->SetOrigin( m_origin );
+  m_DiffusionTensorImage->SetSpacing( m_spacing );
+  m_DiffusionTensorImage->SetDirection( m_direction );
   m_DiffusionTensorImage->SetVectorLength( 6 );
   m_DiffusionTensorImage->Allocate();
 
   m_KurtosisTensorImage = TensorImageType::New();
-  m_KurtosisTensorImage->SetRegions( region );
-  m_KurtosisTensorImage->SetOrigin( origin );
-  m_KurtosisTensorImage->SetSpacing( spacing );
-  m_KurtosisTensorImage->SetDirection( direction );
+  m_KurtosisTensorImage->SetRegions( m_region );
+  m_KurtosisTensorImage->SetOrigin( m_origin );
+  m_KurtosisTensorImage->SetSpacing( m_spacing );
+  m_KurtosisTensorImage->SetDirection( m_direction );
   m_KurtosisTensorImage->SetVectorLength( 15 );
   m_KurtosisTensorImage->Allocate();
-
-  m_ResidualImage = MDImageType::New();
-  m_ResidualImage->SetRegions( region );
-  m_ResidualImage->SetOrigin( origin );
-  m_ResidualImage->SetSpacing( spacing );
-  m_ResidualImage->SetDirection( direction );
-  m_ResidualImage->Allocate();
 }
 
 void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
 {
+  unsigned int numberEncodings = m_dwiEncodings.size();
+
+  // allocate temp result space
+  double * result = new double[21*m_NumberVoxels];
+
+  #pragma omp parallel
+  {
+    Optimizer opt(m_dwiEncodings);
+
+    vnl_vector_fixed<double, 21> X;
+
+    // initial condition is spherical diffusion, small kurtosis
+    // note some care is needed here to ensure that any constraint
+    // is negative, but not too close to zero
+    for(unsigned int i = 0; i < 21; i++) X[i] = 0;
+    X[0] = 1; X[3] = 1; X[5] = 1;
+    X[6] = 1e-5; X[16] = 1e-5; X[20] = 1e-5;
+
+    #pragma omp for
+    for(unsigned int voxel = 0; voxel < m_NumberVoxels; ++voxel)
+      {
+	opt.SetDWI(&dwiData[voxel*numberEncodings]);
+
+	// note: uses previous result as initial condition
+	double norm = opt.solve(X);
+
+	for(unsigned int i = 0; i < 21; ++i) result[voxel*21 + i] = X[i];
+      }
+  }
+
+  // free raw dwi data
+  delete [] dwiData;
+
+  // allocate and fill in result images
   AllocateResult();
 
-  Optimizer opt(m_dwiEncodings);
-
-  vnl_vector_fixed<double, 21> X;
-
-  //unsigned int tempdbg = 0;
-
-  typedef itk::ImageRegionIterator<DiffusionImageType> DiffusionIteratorType;
   typedef itk::ImageRegionIterator<TensorImageType> TensorIteratorType;
-  typedef itk::ImageRegionIterator<B0ImageType> B0ImageIteratorType;
-  typedef itk::ImageRegionIterator<MDImageType> ResidualImageIteratorType;
-
-  DiffusionIteratorType dwiIt(m_FullEncodingImage, m_FullEncodingImage->GetLargestPossibleRegion() );
-  B0ImageIteratorType b0It(m_B0Image, m_B0Image->GetLargestPossibleRegion() );
   TensorIteratorType dtIt( m_DiffusionTensorImage,  m_DiffusionTensorImage->GetLargestPossibleRegion() );
   TensorIteratorType ktIt( m_KurtosisTensorImage,  m_KurtosisTensorImage->GetLargestPossibleRegion() );
-  ResidualImageIteratorType resIt( m_ResidualImage,  m_ResidualImage->GetLargestPossibleRegion() );
-  for(dwiIt.GoToBegin(), b0It.GoToBegin(), dtIt.GoToBegin(), ktIt.GoToBegin(), resIt.GoToBegin();
-      !dwiIt.IsAtEnd();
-      ++dwiIt, ++b0It, ++dtIt, ++ktIt, ++resIt)
+  unsigned int voxel = 0;
+  for(dtIt.GoToBegin(), ktIt.GoToBegin();
+      !(dtIt.IsAtEnd() || ktIt.IsAtEnd());
+      ++dtIt, ++ktIt)
     {
-      // pull out dwi vector for this voxel
-      DiffusionImageType::PixelType dwiVec = dwiIt.Get();
+      vnl_vector_fixed<double, 21> X;
+      for(unsigned int i = 0; i < 21; ++i) X[i] = result[voxel*21 + i];
 
-      opt.SetDWI(dwiVec);
-
-      // use previous result as initial condition
-      double norm = opt.solve(X);
-
-      // if(tempdbg > 58) break;
-      // tempdbg +=1;
-
-      resIt.Set(norm);
-
-      // fill Diffusion tensor after shifting negative eigenvalues
+      // fill Diffusion tensor
       TensorImageType::PixelType dtVec = dtIt.Get();
       for(unsigned int i = 0; i < 6; ++i)
 	{
 	  dtVec[i] = X[i];
 	}
-
-      // shift negative eigenvalues
-      vnl_matrix<double> DT(3,3);
-      DT(0,0) = dtVec[0];
-      DT(0,1) = dtVec[1];
-      DT(0,2) = dtVec[2];
-      DT(1,0) = dtVec[1];
-      DT(1,1) = dtVec[3];
-      DT(1,2) = dtVec[4];
-      DT(2,0) = dtVec[2];
-      DT(2,1) = dtVec[4];
-      DT(2,2) = dtVec[5];
-
-      vnl_symmetric_eigensystem<double> E(DT);
-      if(E.get_eigenvalue(0) < 0)
-	{
-	  dtVec[0] += -E.get_eigenvalue(0);
-	  dtVec[3] += -E.get_eigenvalue(0);
-	  dtVec[5] += -E.get_eigenvalue(0);
-	}
-      dtIt.Set(dtVec);
 
       double meanDiff = (dtVec[0]+dtVec[3]+dtVec[5])/3;
 
@@ -310,41 +251,13 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
 	}
       ktIt.Set(ktVec);
 
+      ++voxel;
     }
+
+  // free temp result space
+  delete [] result;
 }
 
-
-void DiffusionKurtosisFittingApp::WriteB0Image(std::string filename)
-{
-  typedef itk::ImageFileWriter<B0ImageType> FileWriterType;
-  FileWriterType::Pointer writer = FileWriterType::New();
-  writer->SetFileName( filename.c_str() );
-  writer->SetInput(m_B0Image);
-  try
-    {
-    writer->Update();
-    }
-  catch (itk::ExceptionObject e)
-    {
-    std::cout << "Error: Could not Write B0 Image: " << e << std::endl;
-    }
-}
-
-void DiffusionKurtosisFittingApp::WriteResidualImage(std::string filename)
-{
-  typedef itk::ImageFileWriter<MDImageType> FileWriterType;
-  FileWriterType::Pointer writer = FileWriterType::New();
-  writer->SetFileName( filename.c_str() );
-  writer->SetInput(m_ResidualImage);
-  try
-    {
-    writer->Update();
-    }
-  catch (itk::ExceptionObject e)
-    {
-    std::cout << "Error: Could not Write Residual Image: " << e << std::endl;
-    }
-}
 
 void DiffusionKurtosisFittingApp::WriteDiffusionTensorImage(std::string filename)
 {

@@ -40,7 +40,6 @@ int main(int argc, char** argv)
 {
   // command line args
   vul_arg<std::vector< std::string > > infiles("-i", "Input NRRD DWI Files");
-  vul_arg<std::string> b0_outfile("-b", "Output B0 File", "B0_output.nii.gz");
   vul_arg<std::string> dti_outfile("-d", "Output Diffusion Tensor File", "DTI_output.nii.gz");
   vul_arg<std::string> dki_outfile("-k", "Output Diffusion Kurtosis Tensor File", "DKI_output.nii.gz");
   vul_arg_parse(argc, argv);
@@ -54,13 +53,12 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
     }
 
-  app.ComputeB0Image();
+  //app.ComputeB0Image();
 
   app.ComputeDiffusionAndKurtosis();
 
-  app.WriteB0Image(b0_outfile());
   app.WriteDiffusionTensorImage(dti_outfile());
   app.WriteKurtosisTensorImage(dki_outfile());
-  app.WriteResidualImage(std::string("fit_residual.nii.gz"));
+
   return EXIT_SUCCESS;
 }
