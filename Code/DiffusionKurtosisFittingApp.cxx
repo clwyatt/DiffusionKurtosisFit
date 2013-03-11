@@ -192,7 +192,9 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
   // allocate temp result space
   double * result = new double[21*m_NumberVoxels];
 
-  #pragma omp parallel
+  unsigned int numberBadFits = 0;
+
+  #pragma omp parallel shared(numberBadFits)
   {
     Optimizer opt(m_dwiEncodings);
 
@@ -211,11 +213,22 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
 	opt.SetDWI(&dwiData[voxel*numberEncodings]);
 
 	// note: uses previous result as initial condition
-	double norm = opt.solve(X);
+	bool badfit;
+	double norm = opt.solve(X, badfit);
+
+	if(badfit)
+	  {
+	    #pragma omp critical
+	    numberBadFits += 1;
+	  }
 
 	for(unsigned int i = 0; i < 21; ++i) result[voxel*21 + i] = X[i];
-      }
+       }
   }
+
+	    std::cout << numberBadFits << " bad fits ("
+		      << static_cast<double>(numberBadFits)/static_cast<double>(m_NumberVoxels)
+		      << " percent)" << std::endl;
 
   // free raw dwi data
   delete [] dwiData;

@@ -262,14 +262,15 @@ double Optimizer::SolutionNorm(vnl_vector_fixed<double, 21> & X)
   return sqrt(norm);
 }
 
-double Optimizer::InteriorPointMethod(vnl_vector_fixed<double, 21> & X)
+double Optimizer::InteriorPointMethod(vnl_vector_fixed<double, 21> & X, bool & badfit)
 {
   for(unsigned int timeIndex = 0; timeIndex < timeSchedule.size(); ++timeIndex)
     {
       Newton(timeIndex, X);
       if(violated_constraints(X) > 0)
 	{
-	  std::cout << "WARNING: Interior Point Method Halted Early." << std::endl;
+	  //std::cout << "WARNING: Interior Point Method Halted Early." << std::endl;
+	  badfit = true;
 	  break;
 	}
     }
@@ -277,13 +278,15 @@ double Optimizer::InteriorPointMethod(vnl_vector_fixed<double, 21> & X)
   return SolutionNorm(X);
 }
 
-double Optimizer::solve(vnl_vector_fixed<double, 21> &X)
+double Optimizer::solve(vnl_vector_fixed<double, 21> &X, bool & badfit)
 {
+  badfit = false;
+
   vnl_vector_fixed<double, 21> T;
   double norm = ULLS(T);
   if(violated_constraints(T) > 0)
     {
-      norm = InteriorPointMethod(X);
+      norm = InteriorPointMethod(X, badfit);
     }
   else
     {

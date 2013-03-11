@@ -13,7 +13,7 @@ public:
 
   void SetDWI(double * data);
 
-  double solve(vnl_vector_fixed<double, 21> &X);
+  double solve(vnl_vector_fixed<double, 21> &X, bool & badfit);
 
 private:
   Optimizer(){};
@@ -23,7 +23,7 @@ private:
   void build_d();
   unsigned int violated_constraints(vnl_vector_fixed<double, 21> &X);
   double ULLS(vnl_vector_fixed<double, 21> & X);
-  double InteriorPointMethod(vnl_vector_fixed<double, 21> & X);
+  double InteriorPointMethod(vnl_vector_fixed<double, 21> & X, bool & badfit);
   void Newton(unsigned int timeIndex, vnl_vector_fixed<double, 21> & X);
   double SolutionNorm(vnl_vector_fixed<double, 21> & X);
 
