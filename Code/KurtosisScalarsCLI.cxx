@@ -249,9 +249,9 @@ void WriteKurtosisComponents(std::string basename)
 int main(int argc, char** argv)
 {
   // command line args
-  vul_arg<std::string> reffile("-r", "Input Reference DWI NRRD File", "");
-  vul_arg<std::string> dki_infile("-k", "Input KTI File", "");
-  vul_arg<std::string> dti_infile("-d", "Input DTI File", "");
+  vul_arg<std::string> reffile(0, "Input Reference DWI NRRD File", "");
+  vul_arg<std::string> dki_infile(0, "Input KTI File", "");
+  vul_arg<std::string> dti_infile(0, "Input DTI File", "");
   vul_arg<std::string> md_outfile("-m", "Output Mean Kurtosis File", "MK_output.nii.gz");
   vul_arg<bool> dump_components("-u", "Dump individual tensor components", false);
   vul_arg_parse(argc, argv);

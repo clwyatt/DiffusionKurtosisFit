@@ -152,7 +152,7 @@ void WriteFractionalAnisotropyImage(std::string filename)
 int main(int argc, char** argv)
 {
   // command line args
-  vul_arg<std::string> infile("-i", "Input DTI File", "");
+  vul_arg<std::string> infile(0, "Input DTI File", "");
   vul_arg<std::string> md_outfile("-m", "Output Mean Diffusivity File", "MD_output.nii.gz");
   vul_arg<std::string> fa_outfile("-f", "Output Fractional Anisotropy File", "FA_output.nii.gz");
   vul_arg_parse(argc, argv);

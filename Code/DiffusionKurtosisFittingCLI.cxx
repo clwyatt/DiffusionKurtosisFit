@@ -39,7 +39,7 @@ OF SUCH DAMAGE.
 int main(int argc, char** argv)
 {
   // command line args
-  vul_arg<std::vector< std::string > > infiles("-i", "Input NRRD DWI Files");
+  vul_arg<std::vector< std::string > > infiles(0, "Input NRRD DWI Files");
   vul_arg<std::string> dti_outfile("-d", "Output Diffusion Tensor File", "DTI_output.nii.gz");
   vul_arg<std::string> dki_outfile("-k", "Output Diffusion Kurtosis Tensor File", "DKI_output.nii.gz");
   vul_arg_parse(argc, argv);
