@@ -31,6 +31,7 @@ OF SUCH DAMAGE.
 
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
+#include <NrrdIO.h>
 #include <itkNrrdImageIO.h>
 #include <itkImageRegionIterator.h>
 #include <vnl/algo/vnl_symmetric_eigensystem.h>

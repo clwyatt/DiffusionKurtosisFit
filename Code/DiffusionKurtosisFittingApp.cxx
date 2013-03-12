@@ -7,6 +7,7 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 #include <itkMetaDataObject.h>
+#include <NrrdIO.h>
 #include <itkNrrdImageIO.h>
 #include <itkImageRegionIterator.h>
 
