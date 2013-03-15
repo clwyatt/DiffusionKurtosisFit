@@ -215,7 +215,7 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
 
 	// note: uses previous result as initial condition
 	bool badfit;
-	double norm = opt.solve(X, badfit);
+	opt.solve(X, badfit);
 
 	if(badfit)
 	  {

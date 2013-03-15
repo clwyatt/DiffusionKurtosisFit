@@ -31,9 +31,9 @@ private:
   std::vector<DiffusionEncodingDirection> nonzero_encodings;
   double bmax;
 
-  static const double t0 = 1e-8;
-  static const double tmu = 1.5;
-  static const double teps = 0.01;
+  double t0;
+  double tmu;
+  double teps;
   std::vector<double> timeSchedule;
 
   vnl_matrix<double> A, C;

@@ -14,6 +14,11 @@ double norm(vnl_vector<double> & x)
 
 Optimizer::Optimizer(const std::vector<DiffusionEncodingDirection> &encodings)
 {
+  // interior point time schedule parameters
+  t0 = 1e-8;
+  tmu = 1.5;
+  teps = 0.01;
+
   full_encodings = encodings;
   bmax = 0;
   for(unsigned int i = 0; i < full_encodings.size(); ++i)
