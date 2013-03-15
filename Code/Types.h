@@ -18,10 +18,10 @@ struct DiffusionEncodingDirection
 {
   double bvalue;
   double gx, gy, gz;
-  static const double EPS = 0.001;
 
   bool isZero()
     {
+      const double EPS = 0.001;
       return ( (fabs(bvalue) < EPS) || ((fabs(gx) < EPS) && (fabs(gy) < EPS) && (fabs(gz) < EPS)) );
     }
 };
