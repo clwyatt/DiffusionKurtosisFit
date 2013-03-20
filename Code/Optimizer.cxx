@@ -68,11 +68,16 @@ Optimizer::Optimizer(const std::vector<DiffusionEncodingDirection> &encodings)
   // B is N x 1
   B = vnl_vector<double>(N);
 
+  // preallocate and precompute when possible
   grad = vnl_vector<double>(21);
   H = vnl_matrix<double>(21,21);
   build_ATA();
   build_CCT();
   build_d();
+
+  // preallocate space for A'b
+  unsigned int T = timeSchedule.size();
+  ATB = new double[21*T];
 }
 
 Optimizer::~Optimizer()
@@ -100,11 +105,9 @@ void Optimizer::build_ATA()
     }
 }
 
-void Optimizer::build_ATB()
+void Optimizer::fill_ATB()
 {
   unsigned int T = timeSchedule.size();
-
-  ATB = new double[21*T];
 
   for(unsigned int t = 0; t < T; ++t)
     {
@@ -167,7 +170,7 @@ void Optimizer::SetDWI(double * data)
     }
 
   // precompute
-  build_ATB();
+  fill_ATB();
 }
 
 unsigned int Optimizer::violated_constraints(vnl_vector_fixed<double, 21> &X)

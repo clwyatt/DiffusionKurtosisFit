@@ -18,7 +18,7 @@ public:
 private:
   Optimizer(){};
   void build_ATA();
-  void build_ATB();
+  void fill_ATB();
   void build_CCT();
   void build_d();
   unsigned int violated_constraints(vnl_vector_fixed<double, 21> &X);
