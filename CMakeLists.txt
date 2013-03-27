@@ -6,7 +6,7 @@ project(DKIFIT)
 # version information (use snapshot for patch in between tagged releases)
 SET(DKIFIT_VERSION_MAJOR "0")
 SET(DKIFIT_VERSION_MINOR "1")
-SET(DKIFIT_VERSION_PATCH "0")
+SET(DKIFIT_VERSION_PATCH "1")
 SET(DKIFIT_VERSION "${DKIFIT_VERSION_MAJOR}.${DKIFIT_VERSION_MINOR}.${DKIFIT_VERSION_PATCH}")
 
 # ITK 4.x required
