@@ -249,7 +249,11 @@ void Optimizer::Newton(unsigned int timeIndex, vnl_vector_fixed<double, 21> & X)
 	      }
 	}
 
+      if( !H.is_finite() )
+	break;
+
       vnl_vector<double> update = vnl_svd<double>(H).solve(grad);
+
       X = X - update;
       updatenorm = norm(update);
     }

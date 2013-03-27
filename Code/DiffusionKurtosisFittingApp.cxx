@@ -201,17 +201,17 @@ void DiffusionKurtosisFittingApp::ComputeDiffusionAndKurtosis()
 
     vnl_vector_fixed<double, 21> X;
 
-    // initial condition is spherical diffusion, small kurtosis
-    // note some care is needed here to ensure that any constraint
-    // is negative, but not too close to zero
-    for(unsigned int i = 0; i < 21; i++) X[i] = 0;
-    X[0] = 1; X[3] = 1; X[5] = 1;
-    X[6] = 1e-5; X[16] = 1e-5; X[20] = 1e-5;
-
     #pragma omp for
     for(unsigned int voxel = 0; voxel < m_NumberVoxels; ++voxel)
       {
 	opt.SetDWI(&dwiData[voxel*numberEncodings]);
+
+	// initial condition is spherical diffusion, small kurtosis
+	// note some care is needed here to ensure that any constraint
+	// is negative, but not too close to zero
+	for(unsigned int i = 0; i < 21; i++) X[i] = 0;
+	X[0] = 1; X[3] = 1; X[5] = 1;
+	X[6] = 1e-5; X[16] = 1e-5; X[20] = 1e-5;
 
 	// note: uses previous result as initial condition
 	bool badfit;
